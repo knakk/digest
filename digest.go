@@ -238,9 +238,12 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	// Hold on to the request body; a reader cannot be un-read.
-	b, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
+	var b []byte
+	if req.Body != nil {
+		var err error
+		if b, err = ioutil.ReadAll(req.Body); err != nil {
+			return nil, err
+		}
 	}
 
 	// Copy the request so we don't modify the input.
@@ -248,8 +251,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	*req2 = *req
 
 	// Copying drains the request body. Set to body we saved above.
-	req.Body = ioutil.NopCloser(bytes.NewReader(b))
-	req2.Body = ioutil.NopCloser(bytes.NewReader(b))
+	if b != nil {
+		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+		req2.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
 
 	req2.Header = make(http.Header)
 	for k, s := range req.Header {
